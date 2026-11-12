@@ -180,4 +180,42 @@ elif menu == "🛋️ 2. Espacio, Diario y Análisis":
 
     with tab_vocab:
         st.subheader("Generador Visual de Vocabulario")
-        st.write("Agrega palabras
+        st.write("Agrega palabras nuevas encontradas en tus libros para crear tu nube visual:")
+        
+        new_word = st.text_input("Añadir nueva palabra:")
+        if st.button("Agregar al vocabulario"):
+            if new_word and new_word.strip() not in st.session_state.vocab_list:
+                st.session_state.vocab_list.append(new_word.strip())
+                st.success(f"Palabra '{new_word}' añadida con éxito.")
+        
+        st.markdown("#### Términos Registrados:")
+        st.write(", ".join([f"`{w}`" for w in st.session_state.vocab_list]))
+        
+        cloud_html = " ".join([f"<span style='font-size: {random.randint(18, 32)}px; margin: 10px; color: #2E7D32; font-weight: bold;'>{w}</span>" for w in st.session_state.vocab_list])
+        st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
+
+    with tab_sentim:
+        st.subheader("Analizador de Sentimientos para tus Reflexiones Literarias")
+        user_reflection = st.text_area("Escribe un párrafo sobre lo que te hizo sentir un personaje o pasaje del libro:")
+        
+        if st.button("Analizar Sentimiento del Texto"):
+            if user_reflection:
+                text_lower = user_reflection.lower()
+                pos_words = ["excelente", "maravilloso", "feliz", "emocionante", "hermoso", "genial", "gusta", "fascinante", "esperanza"]
+                neg_words = ["triste", "aburrido", "mal", "pesado", "tedioso", "confuso", "decepcionante", "melancólico", "cruel"]
+                
+                pos_count = sum(1 for w in pos_words if w in text_lower)
+                neg_count = sum(1 for w in neg_words if w in text_lower)
+                
+                st.markdown("### Resultado del Análisis Emocional:")
+                if pos_count > neg_count:
+                    st.success("😊 Sentimiento Detectado: **POSITIVO** (Predominan sensaciones de agrado, entusiasmo o alegría).")
+                elif neg_count > pos_count:
+                    st.error("😞 Sentimiento Detectado: **NEGATIVO** (Predominan sensaciones de tristeza, tensión o descontento).")
+                else:
+                    st.warning("😐 Sentimiento Detectado: **NEUTRAL / REFLEXIVO** (Un texto descriptivo o equilibrado).")
+                
+                words = user_reflection.split()
+                st.markdown(f"**Métricas del texto:** {len(words)} palabras y {len(user_reflection)} caracteres.")
+            else:
+                st.warning("Por favor escribe un texto para analizar.")
