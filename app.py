@@ -78,10 +78,10 @@ DATA_FILE = Path(os.getenv("MARGEN_DATA", "margen_data.json"))
 LOGO_FILE = Path(__file__).parent / "MARGEN.png"
 
 AMBIENCE = {
-    "silence": "Silencio",
-    "fire": "Fogata relajante",
-    "rain": "Lluvia y truenos",
-    "wind": "Sonido de viento",
+    "silence": "🔇 Silencio",
+    "fire": "🔥 Fogata relajante",
+    "rain": "⛈️ Lluvia y truenos",
+    "wind": "🌬️ Sonido de viento",
 }
 AMBIENCE_CMD = {label: cmd for cmd, label in AMBIENCE.items()}
 AUDIO_FILES = {
@@ -236,7 +236,7 @@ def runtime_defaults():
         "start_time": None, "elapsed_before_pause": 0.0, "session_active": False,
         "session_paused": False, "session_book": None, "session_start_page": 0,
         "device_events": [], "pending_device_finish": False,
-        "ambience": "Silencio", "selected_book": None,
+        "ambience": AMBIENCE["silence"], "selected_book": None,
     }
 
 
@@ -488,8 +488,10 @@ def cb_save_goal():
 
 
 def cb_rating(title):
-    st.session_state.books[title]["rating"] = int(st.session_state[f"rating_{title}"])
-    save_data()
+    value = st.session_state.get(f"rating_{title}")
+    if value is not None:  # st.feedback devuelve 0-4 (o None si se desmarca)
+        st.session_state.books[title]["rating"] = int(value) + 1
+        save_data()
 
 
 def cb_review(title):
@@ -587,7 +589,7 @@ def page_library():
     st.divider()
     st.subheader("Ambiente sonoro")
     labels = list(AMBIENCE.values())
-    current = st.session_state.ambience if st.session_state.ambience in labels else "Silencio"
+    current = st.session_state.ambience if st.session_state.ambience in labels else AMBIENCE["silence"]
     choice = st.radio("Ambiente:", labels, index=labels.index(current), horizontal=True)
     if choice != st.session_state.ambience:
         st.session_state.ambience = choice
@@ -657,8 +659,9 @@ def page_diary():
         st.progress(data["current_page"] / data["total_pages"],
                     text=f"{data['current_page']}/{data['total_pages']} páginas")
         st.caption(f"Tiempo estimado para terminar: {estimate_remaining(title, df)}")
-        st.slider(f"Calificación de {title}", 1, 5, int(data["rating"]),
-                  key=f"rating_{title}", on_change=cb_rating, args=(title,))
+        st.caption(f"Calificación de {title}")
+        st.feedback("stars", default=int(data["rating"]) - 1,
+                    key=f"rating_{title}", on_change=cb_rating, args=(title,))
         st.text_area("Reseña", data["review"], key=f"review_{title}",
                      on_change=cb_review, args=(title,))
         sessions = [s for s in st.session_state.time_log if s["libro"] == title]
@@ -695,14 +698,31 @@ def page_diary():
     with tab_sent:
         st.subheader("Analizador de sentimientos")
         st.caption("Aproximación automática; no sustituye una interpretación de emociones complejas.")
-        test = st.text_area("Prueba un texto", key="sent_test")
-        if st.button("Analizar") and test.strip():
-            st.info(f"Sentimiento estimado: {analyze_sentiment(test)}")
+
+        # Cada texto analizado se registra, así la gráfica de abajo cambia al instante.
+        with st.form("sent_form", clear_on_submit=True):
+            test_book = st.selectbox("Libro", list(st.session_state.books), key="sent_book")
+            test = st.text_area("Escribe una reflexión para analizar")
+            submitted = st.form_submit_button("Analizar y registrar")
+
+        if submitted:
+            if test.strip():
+                result = analyze_sentiment(test)
+                st.session_state.feedback_log.append({
+                    "libro": test_book, "fecha": str(date.today()),
+                    "comentario": test.strip(), "sentimiento": result,
+                })
+                save_data()
+                st.info(f"Sentimiento estimado: {result} (agregado a la gráfica)")
+            else:
+                st.warning("Escribe un texto para analizar.")
 
         log = st.session_state.feedback_log
         if log:
-            counts = pd.Series([sentiment_label(i["sentimiento"]) for i in log]).value_counts()
-            st.bar_chart(counts, color="#1E88E5")
+            counts = (pd.Series([sentiment_label(i["sentimiento"]) for i in log])
+                      .value_counts()
+                      .reindex(["Positivo", "Neutral", "Negativo"], fill_value=0))
+            st.bar_chart(counts, y_label="reflexiones", color="#1E88E5")
             for item in reversed(log[-10:]):
                 with st.container(border=True):
                     st.markdown(f"**{item['libro']}** · {item['fecha']}")
@@ -731,9 +751,11 @@ def page_diary():
 def page_device():
     st.title("Conexión con el compañero físico")
 
-    # Imagen de la sección MQTT
+    # Imagen de la sección MQTT (centrada y más grande)
     if LOGO_FILE.exists():
-        st.image(str(LOGO_FILE), width=320)
+        _, center, _ = st.columns([1, 2, 1])
+        with center:
+            st.image(str(LOGO_FILE), width="stretch")
     else:
         st.caption("Agrega 'MARGEN.png' a la carpeta de la app para mostrar la imagen.")
 
