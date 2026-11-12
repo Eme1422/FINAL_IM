@@ -50,7 +50,7 @@ if menu == "🏠 Inicio y Presentación":
     st.markdown("""
     **MARGEN** es un sistema interactivo enfocado en potenciar la experiencia literaria mediante 
     interfaces multimodales. Esta plataforma fusiona el control ambiental, el seguimiento de hábitos de lectura, 
-    la gestión de páginas y el procesamiento de lenguaje natural (NLP) aprendido en clase.
+    la gestión de páginas y el procesamiento de lenguaje natural (NLP) aprendido en la Clase 8.
     """)
     
     st.info("👈 Utiliza el menú lateral izquierdo para explorar los módulos interactivos de la aplicación.")
@@ -71,7 +71,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
     st.title("🌌 Biblioteca y Sesión de Lectura Activa")
     st.markdown("Elige tu libro actual o agrega uno nuevo, configura tus páginas, ambienta tu espacio y registra tu sesión.")
 
-    # Opción para elegir o agregar un nuevo libro
+    # Selector de libros con opción de agregar uno nuevo
     book_options = list(st.session_state.books.keys()) + ["➕ Agregar nuevo libro"]
     selected_option = st.selectbox("Selecciona un libro o agrega uno:", book_options)
 
@@ -101,7 +101,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             st.markdown(f"**📖 Libro seleccionado:** `{selected_book}`")
             st.markdown(f"**Páginas totales:** {book_info['total_pages']}")
             
-            # Actualizar página actual
+            # Actualizar página actual del libro
             current_p = st.number_input(
                 "¿En qué página vas actualmente?", 
                 min_value=0, 
@@ -138,14 +138,14 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Control de Sesión y Cierre de Sesión con TextBlob
+        # Control de Sesión y Cierre de Sesión con TextBlob (Clase 8)
         st.subheader("⏱️ Temporizador y Control de Sesión")
         session_active = st.checkbox("🟢 Activar sesión de lectura en curso (Cronómetro activo)")
 
         if session_active:
             st.info("📖 Sesión en curso... El tiempo está corriendo. Disfruta tu lectura y actualiza tu página cuando termines.")
         else:
-            st.markdown("### 📝 Cierre de Sesión (Evaluación con Análisis de Sentimiento - Clase 8)")
+            st.markdown("### 📝 Cierre de Sesión (Evaluación con Análisis de Sentimiento)")
             st.write("Al finalizar tu tiempo de lectura, cuéntanos cómo te sentiste y deja tus comentarios:")
             
             closing_comment = st.text_area("¿Qué tal la lectura de hoy? Escribe tus reflexiones o notas:")
