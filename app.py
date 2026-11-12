@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import date
 import random
 from textblob import TextBlob
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 
 # Configuración de la página
 st.set_page_config(
@@ -10,9 +10,6 @@ st.set_page_config(
     page_icon="📚",
     layout="wide"
 )
-
-# Inicializar el traductor para el análisis de texto de la Clase 8
-translator = Translator()
 
 # -------------------------------------------------------------------------
 # INICIALIZACIÓN DE ESTADOS (MEMORIA DE LA APLICACIÓN)
@@ -50,7 +47,7 @@ if menu == "🏠 Inicio y Presentación":
     st.markdown("""
     **MARGEN** es un sistema interactivo enfocado en potenciar la experiencia literaria mediante 
     interfaces multimodales. Esta plataforma fusiona el control ambiental, el seguimiento de hábitos de lectura, 
-    la gestión de páginas y el procesamiento de lenguaje natural (NLP) aprendido en la Clase 8.
+    la gestión de páginas y el procesamiento de lenguaje natural (NLP) con `deep-translator` y `TextBlob`.
     """)
     
     st.info("👈 Utiliza el menú lateral izquierdo para explorar los módulos interactivos de la aplicación.")
@@ -62,7 +59,7 @@ if menu == "🏠 Inicio y Presentación":
         st.write("Selecciona tu lectura actual, agrega nuevos libros, controla el número de páginas recorridas y registra tu tiempo de lectura diario con calendario de hábitos.")
     with col2:
         st.markdown("### 🧠 Análisis Cognitivo y Sensorial")
-        st.write("Incorpora sonidos ambientales relajantes, genera tu nube de vocabulario y evalúa el sentimiento de tus reflexiones con TextBlob y traducción automática.")
+        st.write("Incorpora sonidos ambientales relajantes, genera tu nube de vocabulario y evalúa el sentimiento de tus reflexiones con traducción robusta y análisis de polaridad.")
 
 # -------------------------------------------------------------------------
 # MÓDULO 2: BIBLIOTECA Y SESIÓN DE LECTURA (Página 1)
@@ -138,7 +135,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Control de Sesión y Cierre de Sesión con TextBlob (Clase 8)
+        # Control de Sesión y Cierre de Sesión con deep-translator y TextBlob
         st.subheader("⏱️ Temporizador y Control de Sesión")
         session_active = st.checkbox("🟢 Activar sesión de lectura en curso (Cronómetro activo)")
 
@@ -153,8 +150,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             if st.button("Finalizar sesión y analizar texto"):
                 if closing_comment:
                     try:
-                        translation = translator.translate(closing_comment, src="es", dest="en")
-                        trans_text = translation.text
+                        trans_text = GoogleTranslator(source='es', target='en').translate(closing_comment)
                         blob = TextBlob(trans_text)
                         
                         polarity = round(blob.sentiment.polarity, 2)
@@ -196,7 +192,7 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
     st.title("🛋️ Diario de Lectura, Valoraciones y Analítica")
     st.markdown("Consulta toda la información guardada de tus libros, calificaciones con estrellas, sesiones registradas y analítica completa.")
 
-    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario, Libros y Sesiones", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos (Clase 8)"])
+    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario, Libros y Sesiones", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos"])
 
     # TAB 1: Diario completo con libros, sesiones guardadas, progreso y estrellas (1 a 5)
     with tab_diario:
@@ -254,9 +250,9 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         cloud_html = " ".join([f"<span style='font-size: {random.randint(18, 32)}px; margin: 10px; color: #2E7D32; font-weight: bold;'>{w}</span>" for w in st.session_state.vocab_list])
         st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
 
-    # TAB 3: Analizador de Sentimientos basado en la Clase 8
+    # TAB 3: Analizador de Sentimientos con deep-translator y TextBlob
     with tab_sentim:
-        st.title('Análisis de Sentimiento (Clase 8)')
+        st.title('Análisis de Sentimiento de Textos')
         st.subheader("Por favor escribe en el campo de texto la frase que deseas analizar")
 
         with st.sidebar:
@@ -271,8 +267,7 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         with st.expander('Analizar texto'):
             text = st.text_input('Escribe por favor: ')
             if text:
-                translation = translator.translate(text, src="es", dest="en")
-                trans_text = translation.text
+                trans_text = GoogleTranslator(source='es', target='en').translate(text)
                 blob = TextBlob(trans_text)
                 st.write('Polarity: ', round(blob.sentiment.polarity, 2))
                 st.write('Subjectivity: ', round(blob.sentiment.subjectivity, 2))
