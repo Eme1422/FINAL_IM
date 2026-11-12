@@ -14,6 +14,13 @@ import streamlit as st
 
 st.set_page_config(page_title="MARGEN - Asistente de Lectura", page_icon="📚", layout="wide")
 
+# Degradado azul para la barra lateral
+st.markdown("""
+<style>
+[data-testid="stSidebar"] {background: linear-gradient(180deg, #DCEBFA 0%, #BBDAF7 100%);}
+</style>
+""", unsafe_allow_html=True)
+
 # ============================================================
 # CONFIGURACIÓN (se puede sobrescribir con variables de entorno)
 # ============================================================
@@ -388,19 +395,6 @@ def reading_streak(days):
     return streak
 
 
-def activity_grid(days, weeks=5):
-    today = date.today()
-    start = today - timedelta(days=today.weekday() + 7 * (weeks - 1))
-    lines = ["L  M  X  J  V  S  D"]
-    for w in range(weeks):
-        row = []
-        for d in range(7):
-            day = start + timedelta(days=w * 7 + d)
-            row.append("▫️" if day > today else ("🟩" if day in days else "⬜"))
-        lines.append(" ".join(row))
-    return "  \n".join(lines)
-
-
 def estimate_remaining(title, df):
     book = st.session_state.books[title]
     remaining = book["total_pages"] - book["current_page"]
@@ -535,6 +529,7 @@ def page_library():
         st.progress(progress, text=f"Página {info['current_page']} de {info['total_pages']}")
 
     # --- Ambiente sonoro (se envía al dispositivo automáticamente al cambiar) ---
+    # El audio se reproduce desde la barra lateral (ver ambience_player), así suena en cualquier página.
     st.divider()
     st.subheader("🎧 Ambiente sonoro")
     labels = list(AMBIENCE.values())
@@ -544,11 +539,8 @@ def page_library():
         st.session_state.ambience = choice
         send("ambience", value=AMBIENCE_CMD[choice])
     audio_file = AUDIO_FILES.get(AMBIENCE_CMD[choice])
-    if audio_file:
-        if os.path.exists(audio_file):
-            st.audio(audio_file, loop=True)
-        else:
-            st.caption(f"Agrega '{audio_file}' a la carpeta de la app para reproducir este audio.")
+    if audio_file and not os.path.exists(audio_file):
+        st.caption(f"Agrega '{audio_file}' a la carpeta de la app para reproducir este audio.")
 
     # --- Sesión ---
     st.divider()
@@ -604,9 +596,6 @@ def page_diary():
         c2.metric("Páginas leídas", int(df["paginas_leidas"].sum()))
         c3.metric("Días de lectura", len(days))
 
-        st.subheader("📅 Últimas 5 semanas")
-        st.markdown(activity_grid(days))
-
         st.subheader("📚 Detalle por libro")
         title = st.selectbox("Libro", list(st.session_state.books), key="diary_book")
         data = st.session_state.books[title]
@@ -633,11 +622,11 @@ def page_diary():
                 st.info("Esa palabra ya está registrada.")
         # Tamaño determinista (antes cambiaba aleatoriamente en cada recarga).
         cloud = " ".join(
-            f"<span style='font-size:{16 + sum(map(ord, w)) % 17}px;margin:8px;color:#2E7D32;"
+            f"<span style='font-size:{16 + sum(map(ord, w)) % 17}px;margin:8px;color:#1565C0;"
             f"font-weight:bold;display:inline-block;'>{html.escape(w)}</span>"
             for w in st.session_state.vocab_list
         )
-        st.markdown(f"<div style='padding:25px;background:#E8F5E9;border-radius:12px;"
+        st.markdown(f"<div style='padding:25px;background:#E3F2FD;border-radius:12px;"
                     f"text-align:center;'>{cloud}</div>", unsafe_allow_html=True)
         if st.session_state.vocab_list:
             to_remove = st.selectbox("Eliminar palabra", [""] + st.session_state.vocab_list)
@@ -725,6 +714,16 @@ def page_device():
 
 
 # ============================================================
+# AUDIO AMBIENTAL (suena en cualquier página)
+# ============================================================
+def ambience_player():
+    cmd = AMBIENCE_CMD.get(st.session_state.ambience)
+    audio_file = AUDIO_FILES.get(cmd)
+    if audio_file and os.path.exists(audio_file):
+        st.audio(audio_file, loop=True, autoplay=True)
+
+
+# ============================================================
 # NAVEGACIÓN
 # ============================================================
 st.sidebar.title("📚 MARGEN")
@@ -735,3 +734,7 @@ with st.sidebar:
     device_sync()
 
 {PAGES[0]: page_home, PAGES[1]: page_library, PAGES[2]: page_diary, PAGES[3]: page_device}[menu]()
+
+# Va después de la página para que ya conozca el ambiente elegido en esta ejecución.
+with st.sidebar:
+    ambience_player()
