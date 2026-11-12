@@ -1,5 +1,6 @@
 streamlit
-textblob
 pandas
+textblob
 deep-translator
-pillow
+paho-mqtt
+streamlit-autorefresh
