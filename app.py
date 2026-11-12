@@ -1,6 +1,7 @@
 import streamlit as st
-from datetime import date
+from datetime import datetime, date
 import random
+import pandas as pd
 from textblob import TextBlob
 from deep_translator import GoogleTranslator
 import os
@@ -16,7 +17,7 @@ st.set_page_config(
 translator = GoogleTranslator(source='es', target='en')
 
 # -------------------------------------------------------------------------
-# INICIALIZACIÓN DE ESTADOS (MEMORIA DE LA APLICACIÓN CON DATOS PRECARGADOS)
+# INICIALIZACIÓN DE ESTADOS (MEMORIA DE LA APLICACIÓN)
 # -------------------------------------------------------------------------
 if "books" not in st.session_state:
     st.session_state.books = {
@@ -29,6 +30,18 @@ if "books" not in st.session_state:
 if "reading_sessions" not in st.session_state:
     st.session_state.reading_sessions = ["2026-05-08", "2026-05-10", "2026-05-11", "2026-05-12", "2026-05-13"]
 
+if "time_log" not in st.session_state:
+    # Historial de tiempos en minutos por sesión/fecha
+    st.session_state.time_log = [
+        {"fecha": "2026-05-10", "libro": "Cien años de soledad", "minutos": 45},
+        {"fecha": "2026-05-11", "libro": "1984", "minutos": 30},
+        {"fecha": "2026-05-12", "libro": "El Principito", "minutos": 20},
+        {"fecha": "2026-05-13", "libro": "Crimen y Castigo", "minutos": 60}
+    ]
+
+if "start_time" not in st.session_state:
+    st.session_state.start_time = None
+
 if "vocab_list" not in st.session_state:
     st.session_state.vocab_list = [
         "fascinante", "resiliencia", "epifanía", "nostalgia", "introspección", 
@@ -40,10 +53,10 @@ if "vocab_list" not in st.session_state:
 
 if "feedback_log" not in st.session_state:
     st.session_state.feedback_log = [
-        {"libro": "Cien años de soledad", "fecha": "2026-05-10", "comentario": "Me encantó el capítulo de los gitanos, muy emocionante y mágico.", "sentimiento": "Positivo 😊", "polaridad": 0.8},
-        {"libro": "1984", "fecha": "2026-05-11", "comentario": "El ambiente del libro se siente muy tenso, oscuro y agobiante.", "sentimiento": "Negativo 😔", "polaridad": -0.4},
-        {"libro": "El Principito", "fecha": "2026-05-12", "comentario": "Una lectura bastante tranquila y reflexiva sobre la vida.", "sentimiento": "Neutral 😐", "polaridad": 0.1},
-        {"libro": "Crimen y Castigo", "fecha": "2026-05-13", "comentario": "La culpa del personaje principal es agobiante pero brillante.", "sentimiento": "Positivo 😊", "polaridad": 0.5}
+        {"libro": "Cien años de soledad", "fecha": "2026-05-10", "comentario": "Me encantó el capítulo de los gitanos, muy emocionante y mágico.", "sentimiento": "Positivo 😊"},
+        {"libro": "1984", "fecha": "2026-05-11", "comentario": "El ambiente del libro se siente muy tenso, oscuro y agobiante.", "sentimiento": "Negativo 😔"},
+        {"libro": "El Principito", "fecha": "2026-05-12", "comentario": "Una lectura bastante tranquila y reflexiva sobre la vida.", "sentimiento": "Neutral 😐"},
+        {"libro": "Crimen y Castigo", "fecha": "2026-05-13", "comentario": "La culpa del personaje principal es agobiante pero brillante.", "sentimiento": "Positivo 😊"}
     ]
 
 # -------------------------------------------------------------------------
@@ -63,7 +76,7 @@ if menu == "🏠 Inicio y Presentación":
     st.markdown("""
     **MARGEN** es un sistema interactivo enfocado en potenciar la experiencia literaria mediante 
     interfaces multimodales. Esta plataforma fusiona el control ambiental con archivos de audio locales, 
-    el seguimiento de hábitos de lectura, la gestión de páginas y el procesamiento de lenguaje natural (NLP).
+    el seguimiento real del tiempo de lectura, hábitos, gestión de páginas y procesamiento de lenguaje natural (NLP).
     """)
     
     st.info("👈 Utiliza el menú lateral izquierdo para explorar los módulos interactivos de la aplicación.")
@@ -72,17 +85,17 @@ if menu == "🏠 Inicio y Presentación":
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("### 📖 Gestión de Libros y Sesiones")
-        st.write("Selecciona tu lectura actual, agrega nuevos libros, controla el número de páginas recorridas y registra tu tiempo de lectura diario con calendario de hábitos.")
+        st.write("Selecciona tu lectura actual, agrega nuevos libros, controla el número de páginas recorridas y mide el tiempo real de lectura con cronómetro de sistema.")
     with col2:
         st.markdown("### 🧠 Análisis Cognitivo y Sensorial")
-        st.write("Reproduce tus audios ambientales locales, genera tu nube de vocabulario enriquecida y analiza automáticamente el sentimiento de tus reflexiones tras cada sesión.")
+        st.write("Reproduce tus audios ambientales locales, genera tu nube de vocaburidad enriquecida, evalúa automáticamente tus reflexiones y consulta gráficas de tus tiempos de lectura.")
 
 # -------------------------------------------------------------------------
 # MÓDULO 2: BIBLIOTECA Y SESIÓN DE LECTURA (Página 1)
 # -------------------------------------------------------------------------
 elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
     st.title("🌌 Biblioteca y Sesión de Lectura Activa")
-    st.markdown("Elige tu libro actual o agrega uno nuevo, configura tus páginas, ambienta tu espacio con tus audios y registra tu sesión.")
+    st.markdown("Elige tu libro actual o agrega uno nuevo, configura tus páginas, ambienta tu espacio con tus audios y toma el tiempo real de tu sesión.")
 
     # Selector de libros con opción de agregar uno nuevo
     book_options = list(st.session_state.books.keys()) + ["➕ Agregar nuevo libro"]
@@ -131,7 +144,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Selector de Sonidos Ambientales con los archivos locales que agregaste
+        # Selector de Sonidos Ambientales Locales
         st.subheader("🎧 Ambiente Sonoro Local No Invasivo")
         sound_choice = st.radio(
             "Elige un sonido ambiental para acompañar tu lectura:",
@@ -143,12 +156,12 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             if os.path.exists("Fogata Relajante.mp3"):
                 st.audio("Fogata Relajante.mp3")
             else:
-                st.warning("No se encontró el archivo local 'Fogata Relajante.mp3' en la carpeta del proyecto.")
+                st.warning("No se encontró el archivo local 'Fogata Relajante.mp3' en la carpeta.")
         elif sound_choice == "🌧️ Lluvia y Truenos":
             if os.path.exists("Sonido de Lluvia y Truenos Distantes.mp3"):
                 st.audio("Sonido de Lluvia y Truenos Distantes.mp3")
             else:
-                st.warning("No se encontró el archivo local 'Sonido de Lluvia y Truenos Distantes.mp3' en la carpeta.")
+                st.warning("No se encontró el archivo 'Sonido de Lluvia y Truenos Distantes.mp3'.")
         elif sound_choice == "💨 Sonido de Viento":
             if os.path.exists("Sonido de viento.mp3"):
                 st.audio("Sonido de viento.mp3")
@@ -157,107 +170,132 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Control de Sesión y Cierre de Sesión con análisis automático y envío al historial
-        st.subheader("⏱️ Temporizador y Control de Sesión")
-        session_active = st.checkbox("🟢 Activar sesión de lectura en curso (Cronómetro activo)")
+        # Cronómetro Real basado en system timestamp
+        st.subheader("⏱️ Control Real de Tiempo de Sesión")
+        
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            if st.button("▶ Iniciar Cronómetro de Lectura", type="primary"):
+                st.session_state.start_time = datetime.now()
+                st.success(f"¡Cronómetro iniciado a las {st.session_state.start_time.strftime('%H:%M:%S')}!")
 
-        if session_active:
-            st.info("📖 Sesión en curso... El tiempo está corriendo. Disfruta tu lectura y actualiza tu página cuando termines.")
-        else:
-            st.markdown("### 📝 Cierre de Sesión (Evaluación y Análisis de Sentimiento)")
-            st.write("Al finalizar tu tiempo de lectura, cuéntanos cómo te sentiste y deja tus comentarios:")
-            
-            closing_comment = st.text_area("¿Qué tal la lectura de hoy? Escribe tus reflexiones o notas:", placeholder="Ej: Me pareció un capítulo excelente, aunque algo triste...")
-            
-            if st.button("Finalizar sesión y analizar texto"):
-                if closing_comment:
-                    try:
-                        try:
-                            trans_text = GoogleTranslator(source='es', target='en').translate(closing_comment)
-                        except Exception:
-                            trans_text = closing_comment  
-                            
-                        blob = TextBlob(trans_text)
-                        polarity = round(blob.sentiment.polarity, 2)
-                        
-                        # Determinación del sentimiento sin mostrar los números de polaridad/subjetividad
-                        if polarity > 0.0 and polarity <= 1.0:
-                            sentimiento_str = "Positivo 😊"
-                            st.success("Es un sentimiento Positivo 😊")
-                        elif polarity >= -1 and polarity < 0:
-                            sentimiento_str = "Negativo 😔"
-                            st.error("Es un sentimiento Negativo 😔")
-                        else:
-                            sentimiento_str = "Neutral 😐"
-                            st.info("Es un sentimiento Neutral 😐")
-                            
-                        today_str = str(date.today())
-                        if today_str not in st.session_state.reading_sessions:
-                            st.session_state.reading_sessions.append(today_str)
-                            
-                        # Guardar automáticamente en el historial que alimenta la sección de análisis
-                        st.session_state.feedback_log.append({
-                            "libro": selected_book,
-                            "fecha": today_str,
-                            "comentario": closing_comment,
-                            "sentimiento": sentimiento_str,
-                            "polaridad": polarity
-                        })
-                        st.success("¡Sesión finalizada, guardada y enviada al analizador de sentimientos correctamente!")
-                    except Exception as e:
-                        st.error(f"Error al procesar el análisis de texto: {e}")
+        with col_t2:
+            if st.session_state.start_time:
+                st.info(f"⏳ Sesión en curso iniciada a las {st.session_state.start_time.strftime('%H:%M:%S')}")
+            else:
+                st.warning("El cronómetro está detenido. Presiona iniciar cuando comiences a leer.")
+
+        st.markdown("---")
+        st.markdown("### 📝 Cierre de Sesión y Evaluación")
+        closing_comment = st.text_area("¿Qué tal la lectura de hoy? Escribe tus reflexiones o notas:", placeholder="Ej: Me pareció un capítulo excelente...")
+
+        if st.button("⏹ Finalizar Sesión y Guardar Tiempos"):
+            if st.session_state.start_time is not None:
+                # Calcular el tiempo real transcurrido en minutos
+                end_time = datetime.now()
+                elapsed_seconds = (end_time - st.session_state.start_time).total_seconds()
+                elapsed_minutes = max(1, int(elapsed_seconds / 60)) # Mínimo 1 minuto para pruebas
+                
+                # Análisis de sentimiento con TextBlob
+                try:
+                    trans_text = GoogleTranslator(source='es', target='en').translate(closing_comment) if closing_comment else "Neutral reading session"
+                except Exception:
+                    trans_text = closing_comment if closing_comment else "Neutral"
+                    
+                blob = TextBlob(trans_text)
+                polarity = round(blob.sentiment.polarity, 2)
+                
+                if polarity > 0.0:
+                    sentimiento_str = "Positivo 😊"
+                elif polarity < 0:
+                    sentimiento_str = "Negativo 😔"
                 else:
-                    st.warning("Por favor escribe un comentario antes de finalizar la sesión.")
+                    sentimiento_str = "Neutral 😐"
+                    
+                today_str = str(date.today())
+                if today_str not in st.session_state.reading_sessions:
+                    st.session_state.reading_sessions.append(today_str)
+                
+                # Guardar en el registro de tiempos para la gráfica
+                st.session_state.time_log.append({
+                    "fecha": today_str,
+                    "libro": selected_book,
+                    "minutos": elapsed_minutes
+                })
+
+                # Guardar en el historial de comentarios
+                st.session_state.feedback_log.append({
+                    "libro": selected_book,
+                    "fecha": today_str,
+                    "comentario": closing_comment if closing_comment else "Sin comentarios",
+                    "sentimiento": sentimiento_str
+                })
+
+                # Reiniciar cronómetro
+                st.session_state.start_time = None
+                st.success(f"¡Sesión finalizada con éxito! Tiempo registrado: {elapsed_minutes} minutos.")
+                st.rerun()
+            else:
+                st.warning("Debes iniciar el cronómetro primero antes de poder finalizar la sesión.")
 
 # -------------------------------------------------------------------------
 # MÓDULO 3: DIARIO, VALORACIONES Y ANÁLISIS (Página 2)
 # -------------------------------------------------------------------------
 elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
     st.title("🛋️ Diario de Lectura, Valoraciones y Analítica")
-    st.markdown("Consulta toda la información guardada de tus libros, calificaciones con estrellas, sesiones registradas y analítica completa.")
+    st.markdown("Consulta toda la información guardada de tus libros, calificaciones con estrellas, sesiones, nube de vocabulario, gráfica de tiempos y análisis de sentimientos.")
 
-    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario, Libros y Sesiones", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos (Sesiones)"])
+    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario, Tiempos y Sesiones", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos"])
 
-    # TAB 1: Diario completo con libros, sesiones guardadas, progreso y estrellas (1 a 5)
+    # TAB 1: Diario completo con gráfica de tiempos y sesiones
     with tab_diario:
+        st.subheader("📈 Gráfica de Tiempos de Lectura por Sesión")
+        if st.session_state.time_log:
+            df_time = pd.DataFrame(st.session_state.time_log)
+            # Mostrar gráfico de barras usando los minutos leídos
+            st.bar_chart(df_time, x="fecha", y="minutos", color="libro")
+        else:
+            st.info("Aún no hay registros de tiempo.")
+
+        st.markdown("---")
         st.subheader("📚 Resumen y Analítica de Todos los Libros")
         
-        if not st.session_state.books:
-            st.info("No hay libros registrados.")
-        else:
-            for book_title, data in st.session_state.books.items():
-                with st.expander(f"📖 {book_title} — Progreso: {data['current_page']}/{data['total_pages']} pág"):
-                    new_rating = st.slider(
-                        f"Calificación (Estrellas 1-5) para {book_title}:", 
-                        min_value=1, 
-                        max_value=5, 
-                        value=data["rating"], 
-                        key=f"star_{book_title}"
-                    )
-                    st.session_state.books[book_title]["rating"] = new_rating
-                    st.write(f"**Puntuación:** {'⭐' * new_rating} ({new_rating}/5)")
+        for book_title, data in st.session_state.books.items():
+            with st.expander(f"📖 {book_title} — Progreso: {data['current_page']}/{data['total_pages']} pág"):
+                new_rating = st.slider(
+                    f"Calificación (Estrellas 1-5) para {book_title}:", 
+                    min_value=1, 
+                    max_value=5, 
+                    value=data["rating"], 
+                    key=f"star_{book_title}"
+                )
+                st.session_state.books[book_title]["rating"] = new_rating
+                st.write(f"**Puntuación:** {'⭐' * new_rating} ({new_rating}/5)")
 
-                    new_review = st.text_area(
-                        f"Comentarios y Reseña de {book_title}:", 
-                        value=data["review"], 
-                        key=f"rev_{book_title}"
-                    )
-                    st.session_state.books[book_title]["review"] = new_review
+                new_review = st.text_area(
+                    f"Comentarios y Reseña de {book_title}:", 
+                    value=data["review"], 
+                    key=f"rev_{book_title}"
+                )
+                st.session_state.books[book_title]["review"] = new_review
 
-                    st.markdown("#### 🕒 Historial de Sesiones Guardadas:")
-                    libro_sessions = [s for s in st.session_state.feedback_log if s["libro"] == book_title]
-                    if libro_sessions:
-                        for idx, s in enumerate(libro_sessions, 1):
-                            st.write(f"{idx}. **Fecha:** {s['fecha']} | **Sentimiento:** {s['sentimiento']} | *\"{s['comentario']}\"*")
-                    else:
-                        st.write("Aún no hay sesiones cerradas registradas para este libro específico.")
+                st.markdown("#### 🕒 Historial de Sesiones y Tiempos:")
+                libro_sessions = [s for s in st.session_state.feedback_log if s["libro"] == book_title]
+                libro_times = [t for t in st.session_state.time_log if t["libro"] == book_title]
+                
+                if libro_sessions:
+                    for idx, s in enumerate(libro_sessions, 1):
+                        mins = libro_times[idx-1]["minutos"] if idx-1 < len(libro_times) else "N/A"
+                        st.write(f"{idx}. **Fecha:** {s['fecha']} | **Tiempo:** {mins} min | **Sentimiento:** {s['sentimiento']} | *\"{s['comentario']}\"*")
+                else:
+                    st.write("Aún no hay sesiones guardadas para este libro.")
 
         st.markdown("---")
         st.subheader("📅 Calendario de Hábitos (Días de Lectura)")
-        st.write("Fechas en las que se registró actividad:", st.session_state.reading_sessions)
+        st.write("Fechas activas:", st.session_state.reading_sessions)
         st.metric("Total de días leídos", len(st.session_state.reading_sessions))
 
-    # TAB 2: Nube de Vocabulario (Más poblada)
+    # TAB 2: Nube de Vocabulario
     with tab_vocab:
         st.subheader("Generador Visual de Vocabulario")
         st.write("Agrega palabras nuevas para construir tu nube visual de aprendizaje:")
@@ -274,10 +312,10 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         cloud_html = " ".join([f"<span style='font-size: {random.randint(16, 32)}px; margin: 8px; color: #2E7D32; font-weight: bold; display: inline-block;'>{w}</span>" for w in st.session_state.vocab_list])
         st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
 
-    # TAB 3: Analizador de Sentimientos alimentado automáticamente por los comentarios de las sesiones
+    # TAB 3: Analizador de Sentimientos (Comentarios de sesiones)
     with tab_sentim:
         st.title('📊 Analizador de Sentimientos (Comentarios de Sesiones)')
-        st.subheader("Aquí se analizan y muestran automáticamente las reflexiones y notas que dejas al finalizar cada sesión de lectura:")
+        st.subheader("Aquí se analizan y muestran automáticamente las reflexiones que dejas al finalizar cada sesión:")
 
         if not st.session_state.feedback_log:
             st.info("Aún no hay comentarios de sesiones registradas.")
