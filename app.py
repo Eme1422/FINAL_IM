@@ -3,6 +3,7 @@ from datetime import date
 import random
 from textblob import TextBlob
 from deep_translator import GoogleTranslator
+import os
 
 # Configuración de la página
 st.set_page_config(
@@ -33,7 +34,8 @@ if "vocab_list" not in st.session_state:
         "fascinante", "resiliencia", "epifanía", "nostalgia", "introspección", 
         "melancolía", "efímero", "serendipia", "paradigma", "inefable", 
         "pragmático", "catarsis", "utopía", "cognitivo", "multimodal", "heurística",
-        "impredecible", "asombro", "soledad", "distopía", "imaginación"
+        "impredecible", "asombro", "soledad", "distopía", "imaginación",
+        "trascendencia", "esencia", "misterio", "horizonte", "contemplación"
     ]
 
 if "feedback_log" not in st.session_state:
@@ -60,8 +62,8 @@ if menu == "🏠 Inicio y Presentación":
     st.title("📚 MARGEN: Tu Compañero Inteligente de Lectura")
     st.markdown("""
     **MARGEN** es un sistema interactivo enfocado en potenciar la experiencia literaria mediante 
-    interfaces multimodales. Esta plataforma fusiona el control ambiental, el seguimiento de hábitos de lectura, 
-    la gestión de páginas y el procesamiento de lenguaje natural (NLP) con `deep-translator` y `TextBlob`.
+    interfaces multimodales. Esta plataforma fusiona el control ambiental con archivos de audio locales, 
+    el seguimiento de hábitos de lectura, la gestión de páginas y el procesamiento de lenguaje natural (NLP).
     """)
     
     st.info("👈 Utiliza el menú lateral izquierdo para explorar los módulos interactivos de la aplicación.")
@@ -73,14 +75,14 @@ if menu == "🏠 Inicio y Presentación":
         st.write("Selecciona tu lectura actual, agrega nuevos libros, controla el número de páginas recorridas y registra tu tiempo de lectura diario con calendario de hábitos.")
     with col2:
         st.markdown("### 🧠 Análisis Cognitivo y Sensorial")
-        st.write("Incorpora sonidos ambientales relajantes, genera tu nube de vocabulario y evalúa automáticamente el sentimiento de tus reflexiones tras cada sesión.")
+        st.write("Reproduce tus audios ambientales locales, genera tu nube de vocabulario enriquecida y analiza automáticamente el sentimiento de tus reflexiones tras cada sesión.")
 
 # -------------------------------------------------------------------------
 # MÓDULO 2: BIBLIOTECA Y SESIÓN DE LECTURA (Página 1)
 # -------------------------------------------------------------------------
 elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
     st.title("🌌 Biblioteca y Sesión de Lectura Activa")
-    st.markdown("Elige tu libro actual o agrega uno nuevo, configura tus páginas, ambienta tu espacio y registra tu sesión.")
+    st.markdown("Elige tu libro actual o agrega uno nuevo, configura tus páginas, ambienta tu espacio con tus audios y registra tu sesión.")
 
     # Selector de libros con opción de agregar uno nuevo
     book_options = list(st.session_state.books.keys()) + ["➕ Agregar nuevo libro"]
@@ -129,27 +131,33 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Selector de Sonido Ambiental No Invasivo
-        st.subheader("🎧 Ambiente Sonoro No Invasivo")
+        # Selector de Sonidos Ambientales con los archivos locales que agregaste
+        st.subheader("🎧 Ambiente Sonoro Local No Invasivo")
         sound_choice = st.radio(
-            "Elige un sonido de fondo para tu lectura:",
-            ["Silencio", "🔥 Fogata Nocturna", "🌧️ Lluvia Suave", "🌲 Brisa de Bosque"],
+            "Elige un sonido ambiental para acompañar tu lectura:",
+            ["Silencio", "🔥 Fogata Relajante", "🌧️ Lluvia y Truenos", "💨 Sonido de Viento"],
             horizontal=True
         )
 
-        if sound_choice == "🔥 Fogata Nocturna":
-            st.audio("https://actions.google.com/sounds/v1/ambiences/campfire.ogg")
-            st.info("💡 Reproduciendo sonido sutil de fogata.")
-        elif sound_choice == "🌧️ Lluvia Suave":
-            st.audio("https://actions.google.com/sounds/v1/weather/rain_heavy.ogg")
-            st.info("💡 Reproduciendo sonido de lluvia relajante.")
-        elif sound_choice == "🌲 Brisa de Bosque":
-            st.audio("https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg")
-            st.info("💡 Reproduciendo sonido natural del bosque.")
+        if sound_choice == "🔥 Fogata Relajante":
+            if os.path.exists("Fogata Relajante.mp3"):
+                st.audio("Fogata Relajante.mp3")
+            else:
+                st.warning("No se encontró el archivo local 'Fogata Relajante.mp3' en la carpeta del proyecto.")
+        elif sound_choice == "🌧️ Lluvia y Truenos":
+            if os.path.exists("Sonido de Lluvia y Truenos Distantes.mp3"):
+                st.audio("Sonido de Lluvia y Truenos Distantes.mp3")
+            else:
+                st.warning("No se encontró el archivo local 'Sonido de Lluvia y Truenos Distantes.mp3' en la carpeta.")
+        elif sound_choice == "💨 Sonido de Viento":
+            if os.path.exists("Sonido de viento.mp3"):
+                st.audio("Sonido de viento.mp3")
+            else:
+                st.warning("No se encontró el archivo local 'Sonido de viento.mp3' en la carpeta.")
 
         st.divider()
 
-        # Control de Sesión y Cierre de Sesión con análisis de sentimiento automático
+        # Control de Sesión y Cierre de Sesión con análisis automático y envío al historial
         st.subheader("⏱️ Temporizador y Control de Sesión")
         session_active = st.checkbox("🟢 Activar sesión de lectura en curso (Cronómetro activo)")
 
@@ -187,7 +195,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
                         if today_str not in st.session_state.reading_sessions:
                             st.session_state.reading_sessions.append(today_str)
                             
-                        # Guardar automáticamente en el historial que se alimenta con el analizador
+                        # Guardar automáticamente en el historial que alimenta la sección de análisis
                         st.session_state.feedback_log.append({
                             "libro": selected_book,
                             "fecha": today_str,
@@ -269,7 +277,7 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
     # TAB 3: Analizador de Sentimientos alimentado automáticamente por los comentarios de las sesiones
     with tab_sentim:
         st.title('📊 Analizador de Sentimientos (Comentarios de Sesiones)')
-        st.subheader("Aquí se analizan automáticamente las reflexiones y notas que dejas al finalizar cada sesión de lectura:")
+        st.subheader("Aquí se analizan y muestran automáticamente las reflexiones y notas que dejas al finalizar cada sesión de lectura:")
 
         if not st.session_state.feedback_log:
             st.info("Aún no hay comentarios de sesiones registradas.")
