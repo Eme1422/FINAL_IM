@@ -32,14 +32,16 @@ if "vocab_list" not in st.session_state:
     st.session_state.vocab_list = [
         "fascinante", "resiliencia", "epifanía", "nostalgia", "introspección", 
         "melancolía", "efímero", "serendipia", "paradigma", "inefable", 
-        "pragmático", "catarsis", "utopía", "cognitivo", "multimodal", "heurística"
+        "pragmático", "catarsis", "utopía", "cognitivo", "multimodal", "heurística",
+        "impredecible", "asombro", "soledad", "distopía", "imaginación"
     ]
 
 if "feedback_log" not in st.session_state:
     st.session_state.feedback_log = [
         {"libro": "Cien años de soledad", "fecha": "2026-05-10", "comentario": "Me encantó el capítulo de los gitanos, muy emocionante y mágico.", "sentimiento": "Positivo 😊", "polaridad": 0.8},
         {"libro": "1984", "fecha": "2026-05-11", "comentario": "El ambiente del libro se siente muy tenso, oscuro y agobiante.", "sentimiento": "Negativo 😔", "polaridad": -0.4},
-        {"libro": "El Principito", "fecha": "2026-05-12", "comentario": "Una lectura bastante tranquila y reflexiva sobre la vida.", "sentimiento": "Neutral 😐", "polaridad": 0.1}
+        {"libro": "El Principito", "fecha": "2026-05-12", "comentario": "Una lectura bastante tranquila y reflexiva sobre la vida.", "sentimiento": "Neutral 😐", "polaridad": 0.1},
+        {"libro": "Crimen y Castigo", "fecha": "2026-05-13", "comentario": "La culpa del personaje principal es agobiante pero brillante.", "sentimiento": "Positivo 😊", "polaridad": 0.5}
     ]
 
 # -------------------------------------------------------------------------
@@ -154,7 +156,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
         if session_active:
             st.info("📖 Sesión en curso... El tiempo está corriendo. Disfruta tu lectura y actualiza tu página cuando termines.")
         else:
-            st.markdown("### 📝 Cierre de Sesión (Evaluación y Análisis de Sentimiento Automático)")
+            st.markdown("### 📝 Cierre de Sesión (Evaluación y Análisis de Sentimiento)")
             st.write("Al finalizar tu tiempo de lectura, cuéntanos cómo te sentiste y deja tus comentarios:")
             
             closing_comment = st.text_area("¿Qué tal la lectura de hoy? Escribe tus reflexiones o notas:", placeholder="Ej: Me pareció un capítulo excelente, aunque algo triste...")
@@ -162,18 +164,15 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             if st.button("Finalizar sesión y analizar texto"):
                 if closing_comment:
                     try:
-                        # Intentar traducir con manejo de errores para evitar caídas por límite de servidor
                         try:
-                            trans_text = translator.translate(closing_comment)
+                            trans_text = GoogleTranslator(source='es', target='en').translate(closing_comment)
                         except Exception:
-                            trans_text = closing_comment  # Fallback si el servidor se satura
+                            trans_text = closing_comment  
                             
                         blob = TextBlob(trans_text)
                         polarity = round(blob.sentiment.polarity, 2)
-                        subjectivity = round(blob.sentiment.subjectivity, 2)
                         
-                        st.write(f"**Polarity:** {polarity} | **Subjectivity:** {subjectivity}")
-                        
+                        # Determinación del sentimiento sin mostrar los números de polaridad/subjetividad
                         if polarity > 0.0 and polarity <= 1.0:
                             sentimiento_str = "Positivo 😊"
                             st.success("Es un sentimiento Positivo 😊")
@@ -188,6 +187,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
                         if today_str not in st.session_state.reading_sessions:
                             st.session_state.reading_sessions.append(today_str)
                             
+                        # Guardar automáticamente en el historial que se alimenta con el analizador
                         st.session_state.feedback_log.append({
                             "libro": selected_book,
                             "fecha": today_str,
@@ -195,7 +195,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
                             "sentimiento": sentimiento_str,
                             "polaridad": polarity
                         })
-                        st.success("¡Sesión finalizada, guardada y analizada correctamente!")
+                        st.success("¡Sesión finalizada, guardada y enviada al analizador de sentimientos correctamente!")
                     except Exception as e:
                         st.error(f"Error al procesar el análisis de texto: {e}")
                 else:
@@ -208,7 +208,7 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
     st.title("🛋️ Diario de Lectura, Valoraciones y Analítica")
     st.markdown("Consulta toda la información guardada de tus libros, calificaciones con estrellas, sesiones registradas y analítica completa.")
 
-    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario, Libros y Sesiones", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos"])
+    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario, Libros y Sesiones", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos (Sesiones)"])
 
     # TAB 1: Diario completo con libros, sesiones guardadas, progreso y estrellas (1 a 5)
     with tab_diario:
@@ -240,7 +240,7 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
                     libro_sessions = [s for s in st.session_state.feedback_log if s["libro"] == book_title]
                     if libro_sessions:
                         for idx, s in enumerate(libro_sessions, 1):
-                            st.write(f"{idx}. **Fecha:** {s['fecha']} | **Sentimiento:** {s['sentimiento']} (Polaridad: {s['polaridad']}) | *\"{s['comentario']}\"*")
+                            st.write(f"{idx}. **Fecha:** {s['fecha']} | **Sentimiento:** {s['sentimiento']} | *\"{s['comentario']}\"*")
                     else:
                         st.write("Aún no hay sesiones cerradas registradas para este libro específico.")
 
@@ -263,39 +263,19 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         st.markdown("#### Términos Registrados:")
         st.write(", ".join([f"`{w}`" for w in st.session_state.vocab_list]))
         
-        # Nube de palabras estilizada y bien poblada
         cloud_html = " ".join([f"<span style='font-size: {random.randint(16, 32)}px; margin: 8px; color: #2E7D32; font-weight: bold; display: inline-block;'>{w}</span>" for w in st.session_state.vocab_list])
         st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
 
-    # TAB 3: Analizador de Sentimientos (Clase 8 con deep-translator y TextBlob)
+    # TAB 3: Analizador de Sentimientos alimentado automáticamente por los comentarios de las sesiones
     with tab_sentim:
-        st.title('Análisis de Sentimiento de Textos')
-        st.subheader("Por favor escribe en el campo de texto la frase que deseas analizar")
+        st.title('📊 Analizador de Sentimientos (Comentarios de Sesiones)')
+        st.subheader("Aquí se analizan automáticamente las reflexiones y notas que dejas al finalizar cada sesión de lectura:")
 
-        with st.sidebar:
-            st.subheader("Polaridad y Subjetividad")
-            st.markdown("""
-            Polaridad: Indica si el sentimiento expresado en el texto es positivo, negativo o neutral. 
-            Su valor oscila entre -1 (muy negativo) y 1 (muy positivo), con 0 representando un sentimiento neutral.
-            
-            Subjetividad: Mide cuánto del contenido es subjetivo (opiniones, emociones, creencias) frente a objetivo (hechos). Va de 0 a 1, donde 0 es completamente objetivo y 1 es completamente subjetivo.
-            """)
-
-        with st.expander('Analizar texto'):
-            text = st.text_input('Escribe por favor: ')
-            if text:
-                try:
-                    trans_text = GoogleTranslator(source='es', target='en').translate(text)
-                except Exception:
-                    trans_text = text
-                    
-                blob = TextBlob(trans_text)
-                st.write('Polarity: ', round(blob.sentiment.polarity, 2))
-                st.write('Subjectivity: ', round(blob.sentiment.subjectivity, 2))
-                x = round(blob.sentiment.polarity, 2)
-                if x > 0.0 and x <= 1.0:
-                    st.write('Es un sentimiento Positivo 😊')
-                elif x >= -1 and x <= 0:
-                    st.write('Es un sentimiento Negativo 😔')
-                else:
-                    st.write('Es un sentimiento Neutral 😐')
+        if not st.session_state.feedback_log:
+            st.info("Aún no hay comentarios de sesiones registradas.")
+        else:
+            for idx, item in enumerate(st.session_state.feedback_log, 1):
+                with st.container():
+                    st.markdown(f"**Sesión {idx} — Libro:** `{item['libro']}` *(Fecha: {item['fecha']})*")
+                    st.info(f"💬 **Comentario:** \"{item['comentario']}\"\n\n**Sentimiento Evaluado:** {item['sentimiento']}")
+                    st.markdown("---")
