@@ -13,7 +13,6 @@ st.set_page_config(
 # INICIALIZACIÓN DE ESTADOS (MEMORIA DE LA APLICACIÓN)
 # -------------------------------------------------------------------------
 if "books" not in st.session_state:
-    # Lista inicial de libros con sus datos
     st.session_state.books = {
         "Cien años de soledad": {"total_pages": 400, "current_page": 120, "rating": 5, "review": "Una obra maestra absoluta."},
         "El Principito": {"total_pages": 90, "current_page": 90, "rating": 4, "review": "Muy reflexivo y corto."},
@@ -67,12 +66,10 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
     st.title("🌌 Selección de Libro y Sesión Activa")
     st.markdown("Elige el libro que vas a leer hoy, configura tus páginas y ambienta tu espacio con sonidos no invasivos.")
 
-    # 1. Zona para seleccionar el libro de la lista o agregar uno nuevo
     st.subheader("📚 Tus Libros Actuales")
     book_names = list(st.session_state.books.keys())
     selected_book = st.selectbox("Elige un libro para iniciar tu sesión:", book_names)
 
-    # Mostrar información del libro seleccionado
     if selected_book:
         book_info = st.session_state.books[selected_book]
         
@@ -88,7 +85,6 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             )
         
         with col_info_2:
-            # Cálculo del progreso
             curr = st.session_state.books[selected_book]["current_page"]
             tot = book_info["total_pages"]
             prog_pct = int((curr / tot) * 100) if tot > 0 else 0
@@ -97,16 +93,13 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
     st.divider()
 
-    # 2. Control de sesión y preguntas de cierre obligatorias (sentimientos y comentarios)
     st.subheader("⏱️ Control del Tiempo de Lectura")
     
-    # Simulamos el inicio/final de sesión
     session_active = st.checkbox("🟢 Activar modo de sesión de lectura en curso")
     
     if session_active:
         st.info("📖 Sesión en curso... Lee con calma y disfruta tu libro.")
         
-        # Sonido ambiental opcional durante la sesión
         st.markdown("#### 🎧 Sonidos Ambientales No Invasivos")
         sound_choice = st.radio(
             "Elige un sonido de fondo:",
@@ -122,10 +115,104 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             st.audio("https://actions.google.com/sounds/v1/ambiences/forest_birds.ogg")
             
     else:
-        # Al finalizar la sesión, preguntamos obligatoriamente cómo se sintió y comentarios
         st.markdown("### 📝 Cierre de Sesión (Evaluación de Experiencia)")
         st.write("Has finalizado o pausado tu tiempo de lectura. Cuéntanos tu experiencia:")
         
         closing_mood = st.selectbox(
             "¿Cómo te sentiste durante esta sesión de lectura?",
-            ["😊 Muy inspirado y enfocado", "😐 Tranquilo y neutral", "🥱 Cansado o
+            ["😊 Muy inspirado y enfocado", "😐 Tranquilo y neutral", "🥱 Cansado o distraído", "🤔 Pensativo y reflexivo"]
+        )
+        closing_comment = st.text_area("Comentario o nota rápida sobre lo que leíste hoy:")
+        
+        today_str = str(date.today())
+        if st.button("Guardar cierre de sesión y registrar día"):
+            if today_str not in st.session_state.reading_sessions:
+                st.session_state.reading_sessions.append(today_str)
+            
+            st.session_state.feedback_log.append({
+                "libro": selected_book,
+                "fecha": today_str,
+                "estado_animo": closing_mood,
+                "comentario": closing_comment
+            })
+            st.success("¡Sesión finalizada y registrada correctamente en tu calendario de hábitos!")
+
+# -------------------------------------------------------------------------
+# MÓDULO 3: DIARIO, VALORACIONES Y ANÁLISIS COGNITIVO
+# -------------------------------------------------------------------------
+elif menu == "🛋️ 2. Espacio, Diario y Análisis":
+    st.title("🛋️ Mi Diario de Lectura y Análisis Textual")
+    st.markdown("Consulta el historial de todos tus libros, califícalos con estrellas, gestiona tu vocabulario y analiza tus textos.")
+
+    tab_diario, tab_vocab, tab_sentim = st.tabs(["📖 Diario y Calificaciones (1-5 Estrellas)", "☁️ Nube de Vocabulario", "📊 Analizador de Sentimientos y NLP"])
+
+    with tab_diario:
+        st.subheader("Califica y Revisa tus Libros")
+        
+        for book_title, data in st.session_state.books.items():
+            with st.expander(f"📖 {book_title} (Progreso: {data['current_page']}/{data['total_pages']} pág)"):
+                new_rating = st.slider(
+                    f"Calificación para {book_title}:", 
+                    min_value=1, 
+                    max_value=5, 
+                    value=data["rating"], 
+                    key=f"star_{book_title}"
+                )
+                st.session_state.books[book_title]["rating"] = new_rating
+                
+                stars_str = "⭐" * new_rating
+                st.write(f"**Puntuación:** {stars_str} ({new_rating}/5)")
+
+                new_review = st.text_area(
+                    f"Comentarios / Reseña personal de {book_title}:", 
+                    value=data["review"], 
+                    key=f"rev_{book_title}"
+                )
+                st.session_state.books[book_title]["review"] = new_review
+
+        st.markdown("---")
+        st.subheader("📅 Historial de Días Leídos (Calendario de Hábitos)")
+        st.write("Fechas en las que has registrado actividad de lectura:", st.session_state.reading_sessions)
+        st.metric("Total de días con hábito de lectura", len(st.session_state.reading_sessions))
+
+    with tab_vocab:
+        st.subheader("Generador Visual de Vocabulario")
+        st.write("Agrega palabras nuevas encontradas en tus libros para crear tu nube visual:")
+        
+        new_word = st.text_input("Añadir nueva palabra:")
+        if st.button("Agregar al vocabulario"):
+            if new_word and new_word.strip() not in st.session_state.vocab_list:
+                st.session_state.vocab_list.append(new_word.strip())
+                st.success(f"Palabra '{new_word}' añadida con éxito.")
+        
+        st.markdown("#### Términos Registrados:")
+        st.write(", ".join([f"`{w}`" for w in st.session_state.vocab_list]))
+        
+        cloud_html = " ".join([f"<span style='font-size: {random.randint(18, 32)}px; margin: 10px; color: #2E7D32; font-weight: bold;'>{w}</span>" for w in st.session_state.vocab_list])
+        st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
+
+    with tab_sentim:
+        st.subheader("Analizador de Sentimientos para tus Reflexiones Literarias")
+        user_reflection = st.text_area("Escribe un párrafo sobre lo que te hizo sentir un personaje o pasaje del libro:")
+        
+        if st.button("Analizar Sentimiento del Texto"):
+            if user_reflection:
+                text_lower = user_reflection.lower()
+                pos_words = ["excelente", "maravilloso", "feliz", "emocionante", "hermoso", "genial", "gusta", "fascinante", "esperanza"]
+                neg_words = ["triste", "aburrido", "mal", "pesado", "tedioso", "confuso", "decepcionante", "melancólico", "cruel"]
+                
+                pos_count = sum(1 for w in pos_words if w in text_lower)
+                neg_count = sum(1 for w in neg_words if w in text_lower)
+                
+                st.markdown("### Resultado del Análisis Emocional:")
+                if pos_count > neg_count:
+                    st.success("😊 Sentimiento Detectado: **POSITIVO** (Predominan sensaciones de agrado, entusiasmo o alegría).")
+                elif neg_count > pos_count:
+                    st.error("😞 Sentimiento Detectado: **NEGATIVO** (Predominan sensaciones de tristeza, tensión o descontento).")
+                else:
+                    st.warning("😐 Sentimiento Detectado: **NEUTRAL / REFLEXIVO** (Un texto descriptivo o equilibrado).")
+                
+                words = user_reflection.split()
+                st.markdown(f"**Métricas del texto:** {len(words)} palabras y {len(user_reflection)} caracteres.")
+            else:
+                st.warning("Por favor escribe un texto para analizar.")
