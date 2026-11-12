@@ -138,7 +138,7 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Control de Sesión con Temporizador simulado y Cierre de Sesión
+        # Control de Sesión y Cierre de Sesión con TextBlob
         st.subheader("⏱️ Temporizador y Control de Sesión")
         session_active = st.checkbox("🟢 Activar sesión de lectura en curso (Cronómetro activo)")
 
@@ -152,7 +152,6 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
             
             if st.button("Finalizar sesión y analizar texto"):
                 if closing_comment:
-                    # Traducción y Análisis con TextBlob (como enseñó el profesor en la Clase 8)
                     try:
                         translation = translator.translate(closing_comment, src="es", dest="en")
                         trans_text = translation.text
@@ -173,7 +172,6 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
                             sentimiento_str = "Neutral 😐"
                             st.info("Es un sentimiento Neutral 😐")
                             
-                        # Guardar en registros y calendario de hábitos
                         today_str = str(date.today())
                         if today_str not in st.session_state.reading_sessions:
                             st.session_state.reading_sessions.append(today_str)
@@ -209,7 +207,6 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         else:
             for book_title, data in st.session_state.books.items():
                 with st.expander(f"📖 {book_title} — Progreso: {data['current_page']}/{data['total_pages']} pág"):
-                    # Calificación con estrellas de 1 a 5
                     new_rating = st.slider(
                         f"Calificación (Estrellas 1-5) para {book_title}:", 
                         min_value=1, 
@@ -220,7 +217,6 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
                     st.session_state.books[book_title]["rating"] = new_rating
                     st.write(f"**Puntuación:** {'⭐' * new_rating} ({new_rating}/5)")
 
-                    # Reseña personal
                     new_review = st.text_area(
                         f"Comentarios y Reseña de {book_title}:", 
                         value=data["review"], 
@@ -228,12 +224,11 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
                     )
                     st.session_state.books[book_title]["review"] = new_review
 
-                    # Mostrar historial de sesiones guardadas para este libro
-                    st.markdown("#### 🕒 Sesiones guardadas de este libro:")
+                    st.markdown("#### 🕒 Historial de Sesiones Guardadas:")
                     libro_sessions = [s for s in st.session_state.feedback_log if s["libro"] == book_title]
                     if libro_sessions:
-                        for s in libro_sessions:
-                            st.write(f"- **Fecha:** {s['fecha']} | **Ánimo:** {s['sentimiento']} | *\"{s['comentario']}\"*")
+                        for idx, s in enumerate(libro_sessions, 1):
+                            st.write(f"{idx}. **Fecha:** {s['fecha']} | **Sentimiento:** {s['sentimiento']} (Polaridad: {s['polaridad']}) | *\"{s['comentario']}\"*")
                     else:
                         st.write("Aún no hay sesiones cerradas registradas para este libro específico.")
 
@@ -256,11 +251,10 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         st.markdown("#### Términos Registrados:")
         st.write(", ".join([f"`{w}`" for w in st.session_state.vocab_list]))
         
-        # Visualización tipo nube de palabras
         cloud_html = " ".join([f"<span style='font-size: {random.randint(18, 32)}px; margin: 10px; color: #2E7D32; font-weight: bold;'>{w}</span>" for w in st.session_state.vocab_list])
         st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
 
-    # TAB 3: Analizador de Sentimientos basado EXACTAMENTE en la Clase 8 del profesor
+    # TAB 3: Analizador de Sentimientos basado en la Clase 8
     with tab_sentim:
         st.title('Análisis de Sentimiento (Clase 8)')
         st.subheader("Por favor escribe en el campo de texto la frase que deseas analizar")
