@@ -11,24 +11,36 @@ st.set_page_config(
     layout="wide"
 )
 
+# Inicializar el traductor
+translator = GoogleTranslator(source='es', target='en')
+
 # -------------------------------------------------------------------------
-# INICIALIZACIÓN DE ESTADOS (MEMORIA DE LA APLICACIÓN)
+# INICIALIZACIÓN DE ESTADOS (MEMORIA DE LA APLICACIÓN CON DATOS PRECARGADOS)
 # -------------------------------------------------------------------------
 if "books" not in st.session_state:
     st.session_state.books = {
-        "Cien años de soledad": {"total_pages": 400, "current_page": 120, "rating": 5, "review": "Una obra maestra absoluta."},
-        "El Principito": {"total_pages": 90, "current_page": 90, "rating": 4, "review": "Muy reflexivo y corto."},
-        "1984": {"total_pages": 328, "current_page": 150, "rating": 4, "review": "Distopía fascinante."}
+        "Cien años de soledad": {"total_pages": 400, "current_page": 180, "rating": 5, "review": "Una obra maestra absoluta llena de realismo mágico."},
+        "El Principito": {"total_pages": 90, "current_page": 90, "rating": 4, "review": "Muy reflexivo, ideal para todas las edades."},
+        "1984": {"total_pages": 328, "current_page": 210, "rating": 5, "review": "Una distopía escalofriante y sumamente vigente."},
+        "Crimen y Castigo": {"total_pages": 500, "current_page": 140, "rating": 4, "review": "Profundo análisis psicológico y moral."}
     }
 
 if "reading_sessions" not in st.session_state:
-    st.session_state.reading_sessions = ["2026-05-10", "2026-05-11", "2026-05-13"]
+    st.session_state.reading_sessions = ["2026-05-08", "2026-05-10", "2026-05-11", "2026-05-12", "2026-05-13"]
 
 if "vocab_list" not in st.session_state:
-    st.session_state.vocab_list = ["fascinante", "resiliencia", "epifanía", "nostalgia", "introspección"]
+    st.session_state.vocab_list = [
+        "fascinante", "resiliencia", "epifanía", "nostalgia", "introspección", 
+        "melancolía", "efímero", "serendipia", "paradigma", "inefable", 
+        "pragmático", "catarsis", "utopía", "cognitivo", "multimodal", "heurística"
+    ]
 
 if "feedback_log" not in st.session_state:
-    st.session_state.feedback_log = []
+    st.session_state.feedback_log = [
+        {"libro": "Cien años de soledad", "fecha": "2026-05-10", "comentario": "Me encantó el capítulo de los gitanos, muy emocionante y mágico.", "sentimiento": "Positivo 😊", "polaridad": 0.8},
+        {"libro": "1984", "fecha": "2026-05-11", "comentario": "El ambiente del libro se siente muy tenso, oscuro y agobiante.", "sentimiento": "Negativo 😔", "polaridad": -0.4},
+        {"libro": "El Principito", "fecha": "2026-05-12", "comentario": "Una lectura bastante tranquila y reflexiva sobre la vida.", "sentimiento": "Neutral 😐", "polaridad": 0.1}
+    ]
 
 # -------------------------------------------------------------------------
 # MENÚ DE NAVEGACIÓN LATERAL
@@ -59,7 +71,7 @@ if menu == "🏠 Inicio y Presentación":
         st.write("Selecciona tu lectura actual, agrega nuevos libros, controla el número de páginas recorridas y registra tu tiempo de lectura diario con calendario de hábitos.")
     with col2:
         st.markdown("### 🧠 Análisis Cognitivo y Sensorial")
-        st.write("Incorpora sonidos ambientales relajantes, genera tu nube de vocabulario y evalúa el sentimiento de tus reflexiones con traducción robusta y análisis de polaridad.")
+        st.write("Incorpora sonidos ambientales relajantes, genera tu nube de vocabulario y evalúa automáticamente el sentimiento de tus reflexiones tras cada sesión.")
 
 # -------------------------------------------------------------------------
 # MÓDULO 2: BIBLIOTECA Y SESIÓN DE LECTURA (Página 1)
@@ -135,24 +147,28 @@ elif menu == "🌌 1. Biblioteca y Sesión de Lectura":
 
         st.divider()
 
-        # Control de Sesión y Cierre de Sesión con deep-translator y TextBlob
+        # Control de Sesión y Cierre de Sesión con análisis de sentimiento automático
         st.subheader("⏱️ Temporizador y Control de Sesión")
         session_active = st.checkbox("🟢 Activar sesión de lectura en curso (Cronómetro activo)")
 
         if session_active:
             st.info("📖 Sesión en curso... El tiempo está corriendo. Disfruta tu lectura y actualiza tu página cuando termines.")
         else:
-            st.markdown("### 📝 Cierre de Sesión (Evaluación con Análisis de Sentimiento)")
+            st.markdown("### 📝 Cierre de Sesión (Evaluación y Análisis de Sentimiento Automático)")
             st.write("Al finalizar tu tiempo de lectura, cuéntanos cómo te sentiste y deja tus comentarios:")
             
-            closing_comment = st.text_area("¿Qué tal la lectura de hoy? Escribe tus reflexiones o notas:")
+            closing_comment = st.text_area("¿Qué tal la lectura de hoy? Escribe tus reflexiones o notas:", placeholder="Ej: Me pareció un capítulo excelente, aunque algo triste...")
             
             if st.button("Finalizar sesión y analizar texto"):
                 if closing_comment:
                     try:
-                        trans_text = GoogleTranslator(source='es', target='en').translate(closing_comment)
+                        # Intentar traducir con manejo de errores para evitar caídas por límite de servidor
+                        try:
+                            trans_text = translator.translate(closing_comment)
+                        except Exception:
+                            trans_text = closing_comment  # Fallback si el servidor se satura
+                            
                         blob = TextBlob(trans_text)
-                        
                         polarity = round(blob.sentiment.polarity, 2)
                         subjectivity = round(blob.sentiment.subjectivity, 2)
                         
@@ -233,7 +249,7 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         st.write("Fechas en las que se registró actividad:", st.session_state.reading_sessions)
         st.metric("Total de días leídos", len(st.session_state.reading_sessions))
 
-    # TAB 2: Nube de Vocabulario
+    # TAB 2: Nube de Vocabulario (Más poblada)
     with tab_vocab:
         st.subheader("Generador Visual de Vocabulario")
         st.write("Agrega palabras nuevas para construir tu nube visual de aprendizaje:")
@@ -247,10 +263,11 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         st.markdown("#### Términos Registrados:")
         st.write(", ".join([f"`{w}`" for w in st.session_state.vocab_list]))
         
-        cloud_html = " ".join([f"<span style='font-size: {random.randint(18, 32)}px; margin: 10px; color: #2E7D32; font-weight: bold;'>{w}</span>" for w in st.session_state.vocab_list])
+        # Nube de palabras estilizada y bien poblada
+        cloud_html = " ".join([f"<span style='font-size: {random.randint(16, 32)}px; margin: 8px; color: #2E7D32; font-weight: bold; display: inline-block;'>{w}</span>" for w in st.session_state.vocab_list])
         st.markdown(f"<div style='padding: 25px; background-color: #E8F5E9; border-radius: 12px; text-align: center;'>{cloud_html}</div>", unsafe_allow_html=True)
 
-    # TAB 3: Analizador de Sentimientos con deep-translator y TextBlob
+    # TAB 3: Analizador de Sentimientos (Clase 8 con deep-translator y TextBlob)
     with tab_sentim:
         st.title('Análisis de Sentimiento de Textos')
         st.subheader("Por favor escribe en el campo de texto la frase que deseas analizar")
@@ -267,7 +284,11 @@ elif menu == "🛋️ 2. Diario, Valoraciones y Análisis":
         with st.expander('Analizar texto'):
             text = st.text_input('Escribe por favor: ')
             if text:
-                trans_text = GoogleTranslator(source='es', target='en').translate(text)
+                try:
+                    trans_text = GoogleTranslator(source='es', target='en').translate(text)
+                except Exception:
+                    trans_text = text
+                    
                 blob = TextBlob(trans_text)
                 st.write('Polarity: ', round(blob.sentiment.polarity, 2))
                 st.write('Subjectivity: ', round(blob.sentiment.subjectivity, 2))
